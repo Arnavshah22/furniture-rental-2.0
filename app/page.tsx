@@ -1,4 +1,4 @@
-'use client';
+  'use client';
 import Image from "next/image";
 import Header from "@/components/component/header";
 import { Button } from "@/components/ui/button";
