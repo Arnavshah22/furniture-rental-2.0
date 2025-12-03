@@ -13,7 +13,7 @@ export default function Component() {
   const [username, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const router = useRouter(); 
+  const router = useRouter();
 
   const handleFormValueChange = (e: { target: { id: string; value: SetStateAction<string> } }) => {
     if (e.target.id === "username") {
@@ -29,20 +29,33 @@ export default function Component() {
 
   const register = async () => {
     try {
+      console.log('Attempting to register with:', { username, email, hasPassword: !!password });
+
       const response = await axios.post("/api/auth/sign-up", {
         username,
         email,
         password,
       });
 
+      console.log('Registration successful:', response.data);
+      alert("Successfully registered!");
       router.push("/Login");
 
-      console.log(response.data);
-      alert("Successfully registered!");
+    } catch (error: any) {
+      console.error('Registration error:', error);
 
-    } catch (error) {
-      console.error(error);
-      alert("Something went wrong. Please try again.");
+      // Extract the error message from the API response
+      const errorMessage = error.response?.data?.message || error.message || 'Something went wrong. Please try again.';
+      const errorDetails = error.response?.data?.details;
+
+      console.error('Error details:', { message: errorMessage, details: errorDetails, status: error.response?.status });
+
+      // Show detailed error to user
+      if (errorDetails) {
+        alert(`Registration failed: ${errorMessage}\nDetails: ${JSON.stringify(errorDetails)}`);
+      } else {
+        alert(`Registration failed: ${errorMessage}`);
+      }
     }
   };
 

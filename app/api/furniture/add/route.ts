@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
 
   // Use FormData to parse the request body
   const formData = await req.formData();
+  console.log("FormData received");
 
   const name = formData.get("name");
   const category = formData.get("category");
@@ -25,19 +26,28 @@ export async function POST(req: NextRequest) {
   const description = formData.get("description");
   const imageFile = formData.get("image") as File;
 
+  console.log("Parsed data:", { name, category, price, description, hasImage: !!imageFile });
+
   // Define image path and write file
   let imagePath = null;
   if (imageFile) {
     const filePath = path.join(uploadDir, imageFile.name);
     await fs.promises.writeFile(
       filePath,
-      Buffer.from(await imageFile.arrayBuffer())
+      new Uint8Array(await imageFile.arrayBuffer())
     );
     imagePath = `/uploads/${imageFile.name}`;
   }
 
   try {
     console.log("Creating a new furniture record...");
+    console.log("Data to be saved:", {
+      name,
+      price,
+      category,
+      description,
+      image: imagePath,
+    });
     const newFurniture = await Furniture.create({
       name,
       price,

@@ -29,11 +29,11 @@ export default function Catalog() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCategory, setSelectedCategory] = useState(""); 
-  const [currentUser, setCurrentUser] = useState(null); 
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
 
   const itemsPerPage = 10;
-  const categories = ["Chairs", "Tables", "Sofas", "Beds", "Desks"]; 
+  const categories = ["Chairs", "Tables", "Sofas", "Beds", "Desks"];
 
   useEffect(() => {
     const user = sessionStorage.getItem('currentUser');
@@ -48,7 +48,7 @@ export default function Catalog() {
         const response = await fetch("/api/furniture/list");
         const data = await response.json();
         console.log("Fetched furniture data:", data);
-        setFurnitureItems(data.furniture); 
+        setFurnitureItems(data.furniture);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching furniture data:", error);
@@ -58,34 +58,34 @@ export default function Catalog() {
 
     fetchFurnitureData();
   }, []);
-  
+
   const addToCart = async (furnitureId: string) => {
     try {
       // Retrieve the session data
       const sessionData = sessionStorage.getItem('user');
       console.log('Session Data:', sessionData); // Check if sessionData is being retrieved
-  
+
       if (!sessionData) {
         console.error('No session data found');
         alert("Need to login first");
         return;
       }
-  
+
       // Parse the session data
       const parsedData = JSON.parse(sessionData);
       console.log('Parsed Session Data:', parsedData); // Check parsed session data
-  
+
       // Access the userId inside parsedData.data
       const userId = parsedData?.userId;
-  
+
       // Ensure userId is defined
       if (!userId) {
         console.error('User not logged in or user ID is missing');
         return;
       }
-  
+
       console.log('Adding to cart for user ID:', userId);
-  
+
       // Send the add to cart request to the API
       const response = await fetch('/api/cart/add', {
         method: 'POST',
@@ -98,9 +98,9 @@ export default function Catalog() {
           quantity: 1,          // Default quantity, you can modify as needed
         }),
       });
-  
+
       const result = await response.json();
-  
+
       if (response.status === 200) {
         console.log('Item added to cart successfully:', result);
         alert("Item added to cart")
@@ -111,20 +111,22 @@ export default function Catalog() {
       console.error('Error adding to cart:', error);
     }
   };
-  
 
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = furnitureItems.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(furnitureItems.length / itemsPerPage);
 
-  // Filter by search term and category
-  const filteredItems = currentItems.filter((item) => {
+  // Filter by search term and category FIRST
+  const filteredItems = furnitureItems.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory ? item.category === selectedCategory : true;
     return matchesSearch && matchesCategory;
   });
+
+  // Then apply pagination to the filtered results
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
+
+
 
   const handleNextPage = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
@@ -156,7 +158,7 @@ export default function Catalog() {
                   type="search"
                   placeholder="Search furniture..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                   className="pl-10 pr-4 py-2 w-full rounded-2xl border border-muted focus:border-primary focus:ring-primary"
                 />
               </div>
@@ -164,7 +166,7 @@ export default function Catalog() {
               <div className="relative">
                 <select
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
                   className="block w-full border-gray-300 text-gray-700 py-2 px-4 pr-8 rounded-2xl focus:outline-none bg-muted focus:border-gray-500"
                 >
                   <option value="">All Categories</option>

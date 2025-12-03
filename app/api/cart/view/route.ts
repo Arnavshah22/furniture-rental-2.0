@@ -21,11 +21,46 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Cart not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ cart }, { status: 200 });
-  } catch (error: unknown) {
-    console.error("Error fetching cart:", error); // Log the actual error
+    // Calculate totals
+    let totalProductRent = 0;
+    let totalDeposit = 0;
 
-    // Check if error is an instance of Error before accessing the message
+    // Process items to calculate totals and ensure deposit exists
+    const processedItems = cart.furnitureItems.map((cartItem: any) => {
+      const item = cartItem.item;
+      // Default deposit to price if not present
+      const deposit = item.deposit || item.price;
+
+      totalProductRent += item.price * cartItem.quantity;
+      totalDeposit += deposit * cartItem.quantity;
+
+      return {
+        _id: cartItem._id,
+        quantity: cartItem.quantity,
+        item: {
+          ...item.toObject(),
+          deposit: deposit
+        }
+      };
+    });
+
+    const deliveryCharges = 100;
+    const gst = 20;
+    const payableNow = totalDeposit + deliveryCharges;
+    const totalMonthlyRent = totalProductRent + gst;
+
+    const cartData = {
+      payableNow,
+      totalMonthlyRent,
+      items: {
+        price: totalProductRent
+      },
+      furnitureItems: processedItems
+    };
+
+    return NextResponse.json({ cart: cartData }, { status: 200 });
+  } catch (error: unknown) {
+    console.error("Error fetching cart:", error);
     const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
     return NextResponse.json({ message: 'Error fetching cart', error: errorMessage }, { status: 500 });
   }

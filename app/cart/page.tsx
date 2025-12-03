@@ -15,6 +15,7 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 interface CartItem {
   _id: string;
   item: {
+    _id: string;
     name: string;
     price: number;
     deposit: number;
@@ -65,40 +66,75 @@ export default function Component() {
     fetchCartData();
   }, [userId]); // Dependency array includes userId
 
+  const handleQuantityUpdate = async (itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) return; // Prevent quantity from going below 1
+
+    const user = sessionStorage.getItem('user');
+    let userId = 0;
+    if (user) {
+      const parsedUser = JSON.parse(user);
+      userId = parsedUser.userId;
+    }
+
+    try {
+      await axios.put('/api/cart/update', {
+        userId,
+        furnitureId: itemId,
+        quantity: newQuantity,
+      });
+
+      // Refresh cart data after update
+      const response = await axios.get(`/api/cart/view?userId=${userId}`);
+      setCartData(response.data.cart);
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+    }
+  };
+
+  const handleIncrement = (itemId: string, currentQuantity: number) => {
+    handleQuantityUpdate(itemId, currentQuantity + 1);
+  };
+
+  const handleDecrement = (itemId: string, currentQuantity: number) => {
+    if (currentQuantity > 1) {
+      handleQuantityUpdate(itemId, currentQuantity - 1);
+    }
+  };
+
   const handlePayment = async () => {
     if (!cartData || cartData.payableNow == null) {
       console.error("Cart data or payableNow amount is not available.");
       return;
     }
-  
+
     const stripe = await stripePromise;
-  
+
     if (!stripe) {
       console.error("Stripe.js has not yet loaded.");
       return;
     }
-  
+
     try {
       // Call your backend to create a Checkout session
       const response = await axios.post('/api/payment', {
         amount: cartData.payableNow * 100, // Convert to paise or smallest currency unit
       });
-  
+
       const { sessionId } = response.data; // Changed from clientSecret to sessionId
-  
+
       // Redirect to the Stripe Checkout
       const { error } = await stripe.redirectToCheckout({
         sessionId, // Use sessionId here
       });
-  
+
       if (error) {
         console.error("Error redirecting to checkout:", error);
       }
     } catch (error) {
       console.error("Error during payment processing:", error);
     }
-  };  
-  
+  };
+
 
   if (loading) {
     return <div>Loading...</div>;
@@ -189,35 +225,46 @@ export default function Component() {
                     key={furnitureItem._id}
                     className="p-4 bg-white rounded shadow"
                   >
-                    <div className="flex items-center space-x-4">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        height={500}
-                        width={500}
-                      />
-                      <div>
-                        <h3 className="text-sm font-medium">{item.name}</h3>
-                        <div className="flex justify-between mt-2">
-                          <span>Rent</span>
-                          <span>${item.price}/mo</span>
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          height={96}
+                          width={96}
+                          className="rounded-lg object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium truncate">{item.name}</h3>
+                        <div className="flex justify-between mt-2 text-sm">
+                          <span className="text-gray-600">Rent</span>
+                          <span className="font-medium">${item.price}/mo</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Deposit</span>
-                          <span>${item.deposit}</span>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Deposit</span>
+                          <span className="font-medium">${item.deposit}</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center mt-4 space-x-2">
-                      <Button variant="outline" className="h-8 w-8">
-                        - 
+                      <Button
+                        variant="outline"
+                        className="h-8 w-8"
+                        onClick={() => handleDecrement(item._id, furnitureItem.quantity)}
+                      >
+                        -
                       </Button>
-                      <span>{furnitureItem.quantity}</span> 
-                      <Button variant="outline" className="h-8 w-8">
-                        + 
+                      <span className="min-w-[2rem] text-center">{furnitureItem.quantity}</span>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-8"
+                        onClick={() => handleIncrement(item._id, furnitureItem.quantity)}
+                      >
+                        +
                       </Button>
                       <Select>
-                        <SelectTrigger className="text-sm">
+                        <SelectTrigger className="text-sm flex-1">
                           <SelectValue placeholder="12 Months" />
                         </SelectTrigger>
                         <SelectContent>
